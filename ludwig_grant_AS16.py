@@ -2,8 +2,6 @@
 # Rich Bankhead
 
 from graphics import *
-import time
-
 
 # Define Constants
 ROWS = 7
@@ -12,20 +10,18 @@ LEVELS= 3
 SPACE = 25
 WID = 100
 HGT = 100
-OFFSET = 20
-
-myString = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+OFFSET = 100
+FIRST_LETTER = "A"
 
 # Graphics Window Setup
-WIN_WIDTH = (WID* COLS)*LEVELS + ((LEVELS+1) * OFFSET)   #Pixels
-WIN_HEIGHT = (HGT* ROWS)   #Pixels
-win = GraphWin("GraphicsWindow", WIN_WIDTH, WIN_HEIGHT)
+WIN_WIDTH = (WID* COLS)*LEVELS + ((LEVELS+1) * OFFSET) #Pixels
+WIN_HEIGHT = (HGT* ROWS) #Pixels
+win = GraphWin("GraphicsWindow", WIN_WIDTH, WIN_HEIGHT, autoflush=False)
 win.setBackground("grey")
 
 
-# Dictionary definitions for letters (5 wide x 7 tall) in pixels
-letters = {"_":((0,0,0,0,0), (0,0,0,0,0), (0,0,0,0,0), (0,0,0,0,0), (0,0,0,0,0), (0,0,0,0,0), (1,1,1,1,1)),
-           "A":((0,0,1,0,0), (0,1,0,1,0), (1,0,0,0,1), (1,1,1,1,1), (1,0,0,0,1), (1,0,0,0,1), (1,0,0,0,1)),
+# Dictionary of letters
+letters = {"A":((0,0,1,0,0), (0,1,0,1,0), (1,0,0,0,1), (1,1,1,1,1), (1,0,0,0,1), (1,0,0,0,1), (1,0,0,0,1)),
            "B":((1,1,1,1,0), (1,0,0,0,1), (1,0,0,0,1), (1,1,1,1,1), (1,0,0,0,1), (1,0,0,0,1), (1,1,1,1,0)),
            "C":((1,1,1,1,1), (1,0,0,0,0), (1,0,0,0,0), (1,0,0,0,0), (1,0,0,0,0), (1,0,0,0,0), (1,1,1,1,1)),
            "D":((1,1,1,1,0), (1,0,0,0,1), (1,0,0,0,1), (1,0,0,0,1), (1,0,0,0,1), (1,0,0,0,1), (1,1,1,1,0)),
@@ -51,8 +47,34 @@ letters = {"_":((0,0,0,0,0), (0,0,0,0,0), (0,0,0,0,0), (0,0,0,0,0), (0,0,0,0,0),
            "X":((1,0,0,0,1), (0,1,0,1,0), (0,0,1,0,0), (0,0,1,0,0), (0,0,1,0,0), (0,1,0,1,0), (1,0,0,0,1)),
            "Y":((1,0,0,0,1), (0,1,0,1,0), (0,0,1,0,0), (0,0,1,0,0), (0,0,1,0,0), (0,0,1,0,0), (0,0,1,0,0)),
            "Z":((1,1,1,1,1), (0,0,0,0,1), (0,0,0,1,0), (0,0,1,0,0), (0,1,0,0,0), (1,0,0,0,0), (1,1,1,1,1))}
+           
+selectedLetter = " "
+selected = False
 
-# Main
+def ButtonPress():
+    global selectedLetter
+    global selected
+    keyString = win.checkKey()
+    if keyString == "Up":
+        if selectedLetter == "Z":
+            selectedLetter = "A"
+        else:
+            ch = bytes(selectedLetter, 'utf-8')
+            letter = bytes([ch[0] + 1])
+            letter = str(letter)
+            selectedLetter = letter[2]
+    elif keyString == "Down":
+        if selectedLetter == "A":
+            selectedLetter = "Z"
+        else:
+            ch = bytes(selectedLetter, 'utf-8') 
+            letter = bytes([ch[0] - 1])
+            letter = str(letter)
+            selectedLetter = letter[2]
+    elif keyString == "space":
+        selected = True
+
+# Setup digits
 digits = []
 for k in range(LEVELS):
 	digits.append([])
@@ -62,14 +84,20 @@ for k in range(LEVELS):
 			digits[k][i].append(Rectangle(Point((k * WID * COLS) + (j * WID) + ((k + 1) * OFFSET), i * HGT), Point((k * WID * COLS) + (j * WID + WID) + ((k + 1) * OFFSET), i * HGT + HGT)))
 			digits[k][i][j].draw(win)
 			digits[k][i][j].setFill('black')
-			
-while True:
-	for char in myString:
-		for k in range(LEVELS):
-			for i in range(ROWS):
-				for j in range(COLS):
-					if letters[char][i][j] == 1:
-						digits[k][i][j].setFill('red')
-					else:
-						digits[k][i][j].setFill('black')
-			time.sleep(0.5)
+        
+for k in range(LEVELS): # loop to select each letter
+    selectedLetter = FIRST_LETTER
+    selected = False
+    startTime = time.time()
+    while not selected:
+        ButtonPress()
+        for i in range(ROWS):
+            for j in range(COLS):
+                if letters[selectedLetter][i][j] == 1:
+                    digits[k][i][j].setFill('red')
+                else:
+                    digits[k][i][j].setFill('black')
+        update(30)
+                    
+win.getKey()
+win.close()
