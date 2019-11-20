@@ -1,7 +1,19 @@
-# 2D List of Objects
-# Rich Bankhead
+# File Name: ludwig_grant_AS16.py
+# File Path: /home/ludwigg/Python/PyRpi_AS16/ludwig_grant_AS16.py
+# Run Command: sudo python3 /home/ludwigg/Python/PyRpi_AS16/ludwig_grant_AS16.py
+
+# Grant Ludwig
+# 11/20/2019
+# AS.16
+# Create a classic highscore system
 
 from graphics import *
+import busio
+import digitalio
+import board
+import adafruit_mcp3xxx.mcp3008 as MCP
+from adafruit_mcp3xxx.analog_in import AnalogIn
+import RPi.GPIO as GPIO # Raspberry Pi GPIO library
 
 # Define Constants
 ROWS = 7
@@ -51,11 +63,33 @@ letters = {"A":((0,0,1,0,0), (0,1,0,1,0), (1,0,0,0,1), (1,1,1,1,1), (1,0,0,0,1),
 selectedLetter = " "
 selected = False
 
-def ButtonPress():
+# def ButtonPress():
+    # global selectedLetter
+    # global selected
+    # keyString = win.checkKey()
+    # if keyString == "Up":
+        # if selectedLetter == "Z":
+            # selectedLetter = "A"
+        # else:
+            # ch = bytes(selectedLetter, 'utf-8')
+            # letter = bytes([ch[0] + 1])
+            # letter = str(letter)
+            # selectedLetter = letter[2]
+    # elif keyString == "Down":
+        # if selectedLetter == "A":
+            # selectedLetter = "Z"
+        # else:
+            # ch = bytes(selectedLetter, 'utf-8') 
+            # letter = bytes([ch[0] - 1])
+            # letter = str(letter)
+            # selectedLetter = letter[2]
+    # elif keyString == "space":
+        # selected = True
+
+def MoveStick():
+    global chan
     global selectedLetter
-    global selected
-    keyString = win.checkKey()
-    if keyString == "Up":
+    if chan.voltage/3.3 > 0.6:
         if selectedLetter == "Z":
             selectedLetter = "A"
         else:
@@ -63,7 +97,7 @@ def ButtonPress():
             letter = bytes([ch[0] + 1])
             letter = str(letter)
             selectedLetter = letter[2]
-    elif keyString == "Down":
+    elif chan.voltage/3.3 < 0.4:
         if selectedLetter == "A":
             selectedLetter = "Z"
         else:
@@ -71,8 +105,29 @@ def ButtonPress():
             letter = bytes([ch[0] - 1])
             letter = str(letter)
             selectedLetter = letter[2]
-    elif keyString == "space":
-        selected = True
+        
+def NextLetter(channel)
+    global selected
+    selected = True
+        
+# Setup GPIO
+GPIO.setwarnings(False) # Ignore warnings
+GPIO.setmode(GPIO.BCM) # Use BCM Pin numbering
+GPIO.setup(26, GPIO.IN)
+
+GPIO.add_event_detect(26, GPIO.FALLING, callback=NextLetter, bouncetime=300)
+
+# create the spi bus
+spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
+
+# create the cs (chip select)
+cs = digitalio.DigitalInOut(board.D5)
+
+# create the mcp object
+mcp = MCP.MCP3008(spi, cs)
+
+# create an analog input channel on pin 0
+chan = AnalogIn(mcp, MCP.P0)
 
 # Setup digits
 digits = []
@@ -84,20 +139,33 @@ for k in range(LEVELS):
 			digits[k][i].append(Rectangle(Point((k * WID * COLS) + (j * WID) + ((k + 1) * OFFSET), i * HGT), Point((k * WID * COLS) + (j * WID + WID) + ((k + 1) * OFFSET), i * HGT + HGT)))
 			digits[k][i][j].draw(win)
 			digits[k][i][j].setFill('black')
-        
-for k in range(LEVELS): # loop to select each letter
-    selectedLetter = FIRST_LETTER
+
+try:
+    # Main Loop    
+    for k in range(LEVELS): # loop to select each letter
+        selectedLetter = FIRST_LETTER
+        selected = False
+        startTime = time.time()
+        while not selected:
+            #ButtonPress()
+            MoveStick()
+            for i in range(ROWS):
+                for j in range(COLS):
+                    if letters[selectedLetter][i][j] == 1:
+                        digits[k][i][j].setFill('red')
+                    else:
+                        digits[k][i][j].setFill('black')
+            update(30)
+            
+    # make user push the button one more time to end the program
     selected = False
-    startTime = time.time()
     while not selected:
-        ButtonPress()
-        for i in range(ROWS):
-            for j in range(COLS):
-                if letters[selectedLetter][i][j] == 1:
-                    digits[k][i][j].setFill('red')
-                else:
-                    digits[k][i][j].setFill('black')
-        update(30)
-                    
-win.getKey()
-win.close()
+        empty = 0
+        
+except KeyboardInterrupt: 
+    # This code runs on a Keyboard Interrupt <CNTRL>+C
+    print('\n\n' + 'Program exited on a Keyboard Interrupt' + '\n') 
+
+finally: 
+    # This code runs on every exit and sets any used GPIO pins to input mode.
+    GPIO.cleanup()        
