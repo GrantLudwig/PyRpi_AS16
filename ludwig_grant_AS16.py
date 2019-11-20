@@ -24,6 +24,9 @@ WID = 100
 HGT = 100
 OFFSET = 100
 FIRST_LETTER = "A"
+STICK_RIGHT_VALUE = 0.2
+STICK_LEFT_VALUE = 0.8
+VOLTAGE = 3.3
 
 # Graphics Window Setup
 WIN_WIDTH = (WID* COLS)*LEVELS + ((LEVELS+1) * OFFSET) #Pixels
@@ -62,34 +65,13 @@ letters = {"A":((0,0,1,0,0), (0,1,0,1,0), (1,0,0,0,1), (1,1,1,1,1), (1,0,0,0,1),
            
 selectedLetter = " "
 selected = False
-
-# def ButtonPress():
-    # global selectedLetter
-    # global selected
-    # keyString = win.checkKey()
-    # if keyString == "Up":
-        # if selectedLetter == "Z":
-            # selectedLetter = "A"
-        # else:
-            # ch = bytes(selectedLetter, 'utf-8')
-            # letter = bytes([ch[0] + 1])
-            # letter = str(letter)
-            # selectedLetter = letter[2]
-    # elif keyString == "Down":
-        # if selectedLetter == "A":
-            # selectedLetter = "Z"
-        # else:
-            # ch = bytes(selectedLetter, 'utf-8') 
-            # letter = bytes([ch[0] - 1])
-            # letter = str(letter)
-            # selectedLetter = letter[2]
-    # elif keyString == "space":
-        # selected = True
+stickMiddle = True
 
 def MoveStick():
     global chan
     global selectedLetter
-    if chan.voltage/3.3 > 0.6:
+    global stickMiddle
+    if chan.voltage/VOLTAGE < STICK_RIGHT_VALUE:
         if selectedLetter == "Z":
             selectedLetter = "A"
         else:
@@ -97,7 +79,8 @@ def MoveStick():
             letter = bytes([ch[0] + 1])
             letter = str(letter)
             selectedLetter = letter[2]
-    elif chan.voltage/3.3 < 0.4:
+        stickMiddle = False
+    elif chan.voltage/VOLTAGE > STICK_LEFT_VALUE:
         if selectedLetter == "A":
             selectedLetter = "Z"
         else:
@@ -105,8 +88,14 @@ def MoveStick():
             letter = bytes([ch[0] - 1])
             letter = str(letter)
             selectedLetter = letter[2]
+        stickMiddle = False
         
-def NextLetter(channel)
+def StickCentered():
+    global stickMiddle
+    if chan.voltage/VOLTAGE > STICK_RIGHT_VALUE and chan.voltage/VOLTAGE < STICK_LEFT_VALUE:
+        stickMiddle = True
+        
+def NextLetter(channel):
     global selected
     selected = True
         
@@ -147,8 +136,9 @@ try:
         selected = False
         startTime = time.time()
         while not selected:
-            #ButtonPress()
-            MoveStick()
+            if stickMiddle:
+                MoveStick()
+            StickCentered()
             for i in range(ROWS):
                 for j in range(COLS):
                     if letters[selectedLetter][i][j] == 1:
